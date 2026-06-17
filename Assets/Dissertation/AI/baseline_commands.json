@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "key": "seed16_rooms8_case4",
+      "actions": [
+        "MoveUp",
+	"MoveRight",
+	"MoveRight",
+	"MoveRight",
+	"MoveRight",
+	"MoveRight",
+	"MoveRight",
+	"MoveRight",
+	"MoveRight",
+        "MoveUp",
+        "MoveUp",
+        "MoveUp",
+        "MoveUp",
+        "MoveUp",
+        "MoveUp",
+        "MoveDown",
+        "MoveDown",
+        "MoveDown",
+        "MoveDown",
+        "MoveDown",
+        "MoveDown",
+	"MoveLeft",
+	"MoveLeft",
+	"MoveLeft",
+	"MoveLeft",
+	"MoveLeft",
+	"MoveLeft",
+	"MoveLeft",
+	"SelectWeaponSlot0",
+	"UseWeaponDown"
+      ]
+    },
+    {
+      "key": "seed12_rooms8_case2",
+      "actions": [
+        "MoveRight",
+        "MoveUp",
+        "MoveUp",
+        "MoveLeft",
+        "UseWeaponLeft"
+      ]
+    }
+  ]
+}

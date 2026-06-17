@@ -1,0 +1,431 @@
+using UnityEngine;
+using System.Collections;
+using UnityEngine.Tilemaps;
+
+public class PlayerScript : MonoBehaviour
+{
+    public string state = "alive";
+    public float hp = 100;
+    public float moveSpeed = 5.0f;
+    public float knockResistance = 1f;
+
+    public AudioPlayer audioPlayer;
+
+    public float tileSize = 1.0f;
+    public Tilemap tilemapFloor;
+
+    public bool allowContinuousMove = false;
+    public float continuousMoveCooldown = 0.2f;
+    public bool canMove = true;
+
+    public GameObject DungeonManager;
+    public Vector3 targetPosition;
+    private bool isMoving = false;
+    //public GameObject DijkstraMap;
+
+    private Vector2 touchStartPos;
+    private bool isSwiping = false;
+
+    private Animator animator;
+    SpriteRenderer spriteRenderer;
+    private float normalMoveSpeed;
+    public bool isSliding = false;
+    public int bumpsStuck = 0;
+
+    private Collider2D mainCollider;
+    private Collider2D triggerCollider;
+
+    public Material whiteFlashMaterial;
+    private Material originalMaterial;
+    private Coroutine flashCoroutine;
+
+    private bool hasPlayedSlideSound = false;
+
+    public int aiBumpCount = 0;
+    public int aiDoorInteractionCount = 0;
+
+    private void Awake()
+    {
+        animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        targetPosition = transform.position; // Initialize targetPosition
+        normalMoveSpeed = moveSpeed;
+
+        originalMaterial = spriteRenderer.material;
+
+        audioPlayer = GameObject.FindGameObjectWithTag("AudioSource").GetComponent<AudioPlayer>();
+    }
+
+    private void Start()
+    {
+        Collider2D[] playerColliders = GetComponents<Collider2D>();
+
+        foreach (var col in playerColliders)
+        {
+            if (col.isTrigger)
+            {
+                triggerCollider = col;
+            }
+            else
+            {
+                mainCollider = col;
+            }
+        }
+    }
+
+    private void Update()
+    {
+        HandleMovement();
+        if (!isMoving) // Only check for input if not currently moving
+        {
+            //CheckForInput();
+            HandleSwipeInput(); // Handle swipe inputs
+        }
+    }
+
+    public bool IsMoving()
+    {
+        return isMoving;
+    }
+
+    public bool IsBusy()
+    {
+        return isMoving || !canMove || !CanMove();
+    }
+
+    public bool CanMove()
+    {
+        if (state != "knocked")
+        {
+            return true;
+        }
+        return false;
+    }
+
+    public void TakeDamage(float damage)
+    {
+        hp -= damage;
+
+        FindObjectOfType<AudioPlayer>().PlayHitPlayerSound();
+
+        if (hp <= 0)
+        {
+            SetStateToDead();
+        }
+
+        RDG.Vibration.Vibrate((int)(damage * 2.5f));
+    }
+
+    void SetStateToDead()
+    {
+        state = "dead";
+
+        DungeonManager.GetComponent<DungeonGenerationScript01>().RestartScene();
+    }
+
+    void SetStateToKnocked(float knockTime)
+    {
+        state = "knocked";
+        StartCoroutine(ResetStateAfterKnock(knockTime * knockResistance));
+        mainCollider.enabled = true;
+    }
+
+    private IEnumerator ResetStateAfterKnock(float knockTime)
+    {
+        yield return new WaitForSeconds(knockTime);
+        state = "alive";
+    }
+
+    public void SetStuck(int bumpsStuck)
+    {
+        this.bumpsStuck = bumpsStuck;
+        FindObjectOfType<AudioPlayer>().PlayCobwebStuckSound();
+    }
+
+    private void HandleMovement()
+    {
+        if (isMoving)
+        {
+            if (isSliding)
+            {
+                // Use linear movement (Lerp) when sliding
+                transform.position = Vector3.Lerp(transform.position, targetPosition, moveSpeed * Time.deltaTime / Vector3.Distance(transform.position, targetPosition));
+            }
+            else
+            {
+                // Default smooth movement
+                transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+            }
+
+            animator.SetBool("IsWalking", true);
+
+            // Check if the player has reached the target position
+            if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
+            {
+                // Stop movement and reset flags
+                transform.position = targetPosition;
+                isMoving = false;
+                isSliding = false; // Reset isSliding to false
+                moveSpeed = normalMoveSpeed; // Reset speed to normal
+                hasPlayedSlideSound = false;
+
+                animator.SetBool("IsWalking", false);
+
+                Vector2Int targetPosition2D = new Vector2Int(
+                    Mathf.FloorToInt(targetPosition.x - 0.5f),
+                    Mathf.FloorToInt(targetPosition.y - 0.5f)
+                );
+                // DijkstraMap.GetComponent<DijkstraMap>().GenerateDijkstraMap(targetPosition2D);
+            }
+        }
+    }
+
+    private void CheckForInput()
+    {
+        // Use GetKeyDown to ensure movement is triggered only once per key press
+        if (Input.GetKeyDown(KeyCode.W)) Move(Vector3.up);
+        if (Input.GetKeyDown(KeyCode.S)) Move(Vector3.down);
+        if (Input.GetKeyDown(KeyCode.D)) Move(Vector3.right);
+        if (Input.GetKeyDown(KeyCode.A)) Move(Vector3.left);
+    }
+
+    private void HandleSwipeInput()
+    {
+        // Swipe input handling logic from the original script
+    }
+
+    // Public methods to be called by UI buttons or other input methods
+    public void MoveUp() { Move(Vector3.up); }
+    public void MoveDown() { Move(Vector3.down); }
+    public void MoveLeft() { Move(Vector3.left); }
+    public void MoveRight() { Move(Vector3.right); }
+
+    public void Move(Vector3 direction)
+    {
+        DungeonGenerationScript01 dungeon = DungeonManager.GetComponent<DungeonGenerationScript01>();
+
+        Vector3Int pos = new Vector3Int(
+            Mathf.FloorToInt(transform.position.x),
+            Mathf.FloorToInt(transform.position.y),
+            Mathf.FloorToInt(transform.position.z)
+        );
+
+        if (bumpsStuck > 1 && dungeon.IsCobwebAtPosition(pos))
+        {
+            if (direction.x != 0)
+            {
+                spriteRenderer.flipX = (direction.x < 0);
+            }
+
+            Vector3 bumpPosition = transform.position + direction * 0.23f;
+            StartCoroutine(ReturnFromBump(transform.position));
+            transform.position = bumpPosition;
+            isSliding = false;
+
+            FindObjectOfType<AudioPlayer>().PlayCobwebSound();
+
+            return;
+        }
+
+        if (allowContinuousMove && (!canMove || !CanMove()))
+        {
+            return;
+        }
+
+        Vector3 currentPosition = transform.position;
+
+        Vector3Int intendedCell = tilemapFloor.WorldToCell(currentPosition + direction * tileSize);
+        Vector3Int cellPosition = intendedCell;
+
+        bool positionFound = false;
+        targetPosition = currentPosition;
+
+        while (!positionFound)
+        {
+            if (tilemapFloor.GetTile(cellPosition) != null &&
+                !dungeon.IsTable2x2AtPositionAny(cellPosition) &&
+                !dungeon.IsTable1x2AtPositionAny(cellPosition))
+            {
+                positionFound = true;
+                targetPosition = tilemapFloor.CellToWorld(cellPosition) + new Vector3(0.5f, 0.5f, 0);
+            }
+            else
+            {
+                cellPosition += Vector3Int.RoundToInt(direction);
+                moveSpeed = normalMoveSpeed / 2.5f;
+                isSliding = true;
+
+                if (tilemapFloor.GetTile(cellPosition) == null)
+                {
+                    moveSpeed = normalMoveSpeed;
+                    break;
+                }
+            }
+        }
+
+        Vector3Int targetCell = positionFound
+            ? tilemapFloor.WorldToCell(targetPosition)
+            : intendedCell;
+
+        bool isAnyClosedDoorTile = dungeon.IsDoorAtPositionAny(targetCell);
+        bool isRealClosedDoorTile = dungeon.IsDoorAtPosition(targetCell);
+
+        bool isAnyOpenDoorTile = dungeon.IsDoorOpenAtPositionAny(targetCell);
+        bool isRealOpenDoorTile = dungeon.IsDoorOpenAtPosition(targetCell);
+
+        bool isWrongDoorTile =
+            (isAnyClosedDoorTile && !isRealClosedDoorTile) ||
+            (isAnyOpenDoorTile && !isRealOpenDoorTile);
+
+        bool isSolid = dungeon.IsSolidAtPosition(targetCell, breakDoors: true);
+
+        if (positionFound && !isMoving && !isWrongDoorTile && !isSolid)
+        {
+            mainCollider.enabled = false;
+            GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+            isMoving = true;
+
+            if (direction.x != 0)
+            {
+                spriteRenderer.flipX = (direction.x < 0);
+            }
+
+            animator.SetBool("IsWalking", true);
+
+            if (allowContinuousMove)
+            {
+                StartCoroutine(MoveCooldown());
+            }
+
+            if (bumpsStuck == 1)
+            {
+                Vector3Int flooredPosition = new Vector3Int(
+                    Mathf.FloorToInt(transform.position.x),
+                    Mathf.FloorToInt(transform.position.y),
+                    Mathf.FloorToInt(transform.position.z)
+                );
+
+                FindObjectOfType<AudioPlayer>().PlayCobwebBreakSound();
+                dungeon.RemoveCobwebAtPosition(flooredPosition);
+                bumpsStuck = 0;
+            }
+
+            if (isSliding && !hasPlayedSlideSound)
+            {
+                hasPlayedSlideSound = true;
+                FindObjectOfType<AudioPlayer>().PlaySlideSound();
+            }
+            else
+            {
+                FindObjectOfType<AudioPlayer>().PlayWalkSound();
+
+                if (isRealClosedDoorTile)
+                {
+                    dungeon.HitDoorAtPosition(targetCell);
+                }
+            }
+        }
+        else
+        {
+            aiBumpCount++;
+
+            float bumpAmount = 0.23f;
+
+            if (direction.x != 0)
+            {
+                spriteRenderer.flipX = (direction.x < 0);
+            }
+
+            if (isRealClosedDoorTile)
+            {
+                dungeon.HitDoorAtPosition(targetCell);
+            }
+
+            Vector3 bumpPosition = currentPosition + direction * bumpAmount;
+            transform.position = bumpPosition;
+            StartCoroutine(ReturnFromBump(currentPosition));
+            isSliding = false;
+            canMove = false;
+
+            FindObjectOfType<AudioPlayer>().PlayBumpSound();
+        }
+    }
+
+    private IEnumerator ReturnFromBump(Vector3 originalPosition)
+    {
+        yield return new WaitForSeconds(0.062f); // Brief delay
+        transform.position = originalPosition;
+
+        if (bumpsStuck <= 1)
+        {
+            canMove = true;
+
+            if (allowContinuousMove)
+            {
+                StartCoroutine(MoveCooldown());
+            }
+        }
+        else if (bumpsStuck > 1)
+        {
+            --bumpsStuck;
+        }
+    }
+
+    private IEnumerator MoveCooldown()
+    {
+        canMove = false;
+        yield return new WaitForSeconds(continuousMoveCooldown);
+        canMove = true;
+    }
+
+    public void ApplyKnockback(Vector2 direction, float force, float knockTime, float damageOther)
+    {
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        rb.AddForce(direction * force, ForceMode2D.Impulse);
+        SetStateToKnocked(knockTime);
+        TakeDamage(damageOther);
+
+        // Calculate camera shake based on damage and knockback force (only after 20)
+        float scaledDamage = Mathf.Max(0, damageOther - 20f);
+        float scaledKnockback = Mathf.Max(0, force - 20f);
+
+        float shakeMagnitude = 0.2f + (scaledDamage * 0.005f);
+        float shakeDuration = 0.1f + (scaledKnockback * 0.005f);
+
+        // Clamp to avoid excessive shake
+        shakeMagnitude = Mathf.Min(shakeMagnitude, 1.5f);
+        shakeDuration = Mathf.Min(shakeDuration, 0.6f);
+
+        // Trigger camera shake
+        Camera.main.GetComponent<CameraEffects>()?.Shake(shakeDuration, shakeMagnitude);
+
+        if (flashCoroutine != null)
+            StopCoroutine(flashCoroutine);
+        flashCoroutine = StartCoroutine(FlashWhite(0.15f));
+    }
+
+    private Vector2 SnapToGrid(Vector2 position)
+    {
+        float snappedX = Mathf.Floor(position.x) + 0.5f;
+        float snappedY = Mathf.Floor(position.y) + 0.5f;
+
+        return new Vector2(snappedX, snappedY);
+    }
+
+    private Vector2Int SnapToGridInt(Vector3 position)
+    {
+        return new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+    }
+
+    float GetDecimalPart(float value)
+    {
+        return value - Mathf.Floor(value);
+    }
+
+    private IEnumerator FlashWhite(float duration)
+    {
+        spriteRenderer.material = whiteFlashMaterial;
+        yield return new WaitForSeconds(duration);
+        spriteRenderer.material = originalMaterial;
+    }
+}

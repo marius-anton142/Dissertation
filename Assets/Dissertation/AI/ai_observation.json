@@ -1,0 +1,76 @@
+{
+    "playerX": 4,
+    "playerY": 5,
+    "playerMapRow": 1,
+    "playerMapCol": 5,
+    "currentRoomId": 0,
+    "recentActions": [
+        "MoveUp",
+        "MoveUp",
+        "MoveUp"
+    ],
+    "currentRoomMap": [
+        "###D####",
+        "#OOOOPO#",
+        "#OOOOOO#",
+        "#OTOOOO#",
+        "DOOOOOO#",
+        "#OOOOOOD",
+        "#OOOOOO#",
+        "########"
+    ],
+    "visibleObjects": [
+        {
+            "type": "tree",
+            "row": 3,
+            "col": 2,
+            "worldX": 1,
+            "worldY": 3
+        }
+    ],
+    "visibleDoors": [
+        {
+            "state": "closed",
+            "row": 0,
+            "col": 3,
+            "worldX": 2,
+            "worldY": 6
+        },
+        {
+            "state": "closed",
+            "row": 4,
+            "col": 0,
+            "worldX": -1,
+            "worldY": 2
+        },
+        {
+            "state": "closed",
+            "row": 5,
+            "col": 7,
+            "worldX": 6,
+            "worldY": 1
+        }
+    ],
+    "availableActions": [
+        "MoveUp",
+        "MoveDown",
+        "MoveLeft",
+        "MoveRight",
+        "SelectWeaponSlot1",
+        "SelectWeaponSlot2",
+        "SelectWeaponSlot3",
+        "UseWeaponUp",
+        "UseWeaponDown",
+        "UseWeaponLeft",
+        "UseWeaponRight",
+        "DropSelectedWeapon"
+    ],
+    "inventory": [
+        "Axe",
+        "",
+        "",
+        ""
+    ],
+    "selectedWeaponSlot": 0,
+    "treeCount": 1
+}

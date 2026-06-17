@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "id": "axe_tree_rules",
+      "title": "Axe and tree interaction",
+      "text": "Trees block movement. The player cannot walk onto a tree tile. A tree can only be cut if the player has an axe selected and is directly adjacent to the tree. Use the weapon in the direction of the adjacent tree.",
+      "tags": ["axe", "tree", "weapon"]
+    },
+    {
+      "id": "door_corridor_rules",
+      "title": "Door and corridor traversal",
+      "text": "Closed doors and open doors are entered by moving onto the exact visible door tile. After stepping onto a door, the game automatically traverses the corridor. Do not plan additional actions after entering a door because a new room observation is needed.",
+      "tags": ["door", "corridor", "navigation"]
+    },
+    {
+      "id": "cobweb_rules",
+      "title": "Cobweb hazard",
+      "text": "Cobweb tiles are walkable hazard tiles that can trap the player. Prefer ordinary O floor tiles when a safe route exists. It is acceptable to step onto a cobweb if it is the only practical route to reach an axe, a door, or a tree-adjacent attack tile, or if avoiding it would cause excessive backtracking. If the player is stuck on a cobweb, repeat the same movement direction up to 4 times to break free; do not choose a different route until free. Do not repeatedly move onto new cobweb tiles unless necessary.",
+      "tags": ["cobweb", "hazard", "movement"]
+    },
+    {
+      "id": "chess_knight_rules",
+      "title": "Chess knight enemy",
+      "text": "A chess knight attacks tiles in an L shape: two tiles in one axis and one tile in the other axis. Avoid tiles attacked by a knight even if those tiles look walkable.",
+      "tags": ["knight", "enemy", "hazard"]
+    },
+    {
+      "id": "exploration_rules",
+      "title": "Exploration priority",
+      "text": "If the needed object is not visible and not known in memory, explore through unexplored doors. Prefer doors that do not already have known room connections.",
+      "tags": ["exploration", "memory", "doors"]
+    }
+  ]
+}
