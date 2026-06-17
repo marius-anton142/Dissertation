@@ -1,5 +1,6 @@
-# Enigmagoria
-A mobile roguelike game with procedural dungeon generation, responsive combat system and advanced enemy AI. Work in progress.
+# Dissertation Project
+
+This repository represents the testing environment I have developed and used for my dissertation project.
 
 | <img src="img/dungeon01.png" width="500"> |
 |:--:|
